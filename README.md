@@ -16,7 +16,7 @@ Real-time AI-powered translation SDK optimized for Expo applications. Translate 
 ## Installation
 
 ```bash
-npm install github:LiveI18n/react-native-expo-sdk
+npm install @livei18n/react-native-expo-sdk
 ```
 
 ### Required Dependencies
