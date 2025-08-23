@@ -1,0 +1,49 @@
+{
+  "name": "@livei18n/react-native-expo-sdk",
+  "version": "0.1.0",
+  "description": "Expo SDK for LiveI18n real-time translation platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "expo",
+    "react-native",
+    "i18n",
+    "translation",
+    "internationalization",
+    "livei18n",
+    "mobile"
+  ],
+  "author": "LiveI18n",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  },
+  "optionalDependencies": {
+    "@react-native-async-storage/async-storage": ">=1.17.0",
+    "expo": ">=47.0.0",
+    "expo-localization": ">=14.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.11",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LiveI18n/react-native-expo-sdk"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
