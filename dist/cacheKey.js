@@ -1,0 +1,60 @@
+"use strict";
+/**
+ * CANONICAL Cache Key Generation Algorithm
+ *
+ * CRITICAL: This is the single source of truth for cache key generation.
+ * The backend does NOT generate cache keys - it uses the key provided by this SDK.
+ * This eliminates any risk of cache key drift between frontend and backend.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.generateCacheKey = generateCacheKey;
+function generateCacheKey(customerId, text, locale, context = '', tone = '') {
+    // Step 1: Normalize ALL inputs to lowercase and trim
+    const normalized = {
+        c: customerId,
+        t: text.trim().toLowerCase(),
+        l: locale.toLowerCase(),
+        ctx: context.trim().toLowerCase(),
+        tn: tone.trim().toLowerCase()
+    };
+    // Step 2: Sort keys alphabetically to ensure consistent ordering
+    const sortedKeys = Object.keys(normalized).sort();
+    const sortedObj = {};
+    sortedKeys.forEach(key => {
+        sortedObj[key] = normalized[key];
+    });
+    // Step 3: Create JSON string
+    const jsonString = JSON.stringify(sortedObj);
+    // Step 4: Generate hash (using synchronous version for simplicity)
+    return hashStringSync(jsonString);
+}
+/**
+ * Generate a deterministic hash from a string
+ * Uses simple hash optimized for React Native environments
+ */
+async function hashString(str) {
+    // Always use simple hash for React Native compatibility
+    return simpleHash(str);
+}
+/**
+ * Synchronous version of hashString for compatibility
+ */
+function hashStringSync(str) {
+    // Use simple hash for React Native compatibility
+    return simpleHash(str);
+}
+/**
+ * Simple deterministic hash function
+ * Not cryptographically secure, but good enough for cache keys
+ */
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    // Convert to positive hex string with padding
+    const hex = Math.abs(hash).toString(16);
+    return hex.length >= 8 ? hex : '0'.repeat(8 - hex.length) + hex;
+}
