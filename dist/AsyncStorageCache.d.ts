@@ -1,14 +1,17 @@
-import type { CacheAdapter } from './types';
 /**
  * Hybrid cache that combines fast in-memory LRU cache with AsyncStorage persistence
  * Optimized for Expo applications that may not have MMKV available
  */
-export declare class AsyncStorageCache implements CacheAdapter {
+export declare class AsyncStorageCache {
     private memoryCache;
     private asyncStorage;
     private ttl;
     private storagePrefix;
     constructor(maxMemorySize?: number, ttlHours?: number);
+    /**
+     * Reusable eviction handler to keep AsyncStorage in sync with memory cache
+     */
+    private onEvict;
     get(key: string): string | undefined;
     /**
      * Background method to load from AsyncStorage and populate memory cache
@@ -19,6 +22,10 @@ export declare class AsyncStorageCache implements CacheAdapter {
      * Background method to save to AsyncStorage
      */
     private saveToAsyncStorage;
+    /**
+     * Background method to remove from AsyncStorage
+     */
+    private removeFromAsyncStorage;
     clear(): void;
     /**
      * Background method to clear AsyncStorage

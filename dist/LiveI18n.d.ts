@@ -1,3 +1,5 @@
+import { MemoryLRUCache } from './MemoryLRUCache';
+import { AsyncStorageCache } from './AsyncStorageCache';
 import type { LiveI18nConfig, LiveTextOptions, LocaleDetector } from './types';
 /**
  * Core LiveI18n translation class for React Native
@@ -12,6 +14,7 @@ export declare class LiveI18n {
     private localeDetector?;
     constructor(config: LiveI18nConfig & {
         localeDetector?: LocaleDetector;
+        cache?: MemoryLRUCache | AsyncStorageCache;
     });
     /**
      * Sleep for a given number of milliseconds

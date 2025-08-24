@@ -14,8 +14,8 @@ class LiveI18n {
         this.endpoint = config.endpoint || 'https://api.livei18n.com';
         this.defaultLanguage = config.defaultLanguage;
         this.localeDetector = config.localeDetector;
-        // Use provided cache adapter or default to memory LRU cache
-        this.cache = config.cacheAdapter || new MemoryLRUCache_1.MemoryLRUCache(500, 1);
+        // Use provided cache or default to memory LRU cache
+        this.cache = config.cache || new MemoryLRUCache_1.MemoryLRUCache(MemoryLRUCache_1.DEFAULT_CACHE_SIZE, 1);
     }
     /**
      * Sleep for a given number of milliseconds

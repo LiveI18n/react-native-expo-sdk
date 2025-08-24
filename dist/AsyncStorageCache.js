@@ -7,8 +7,14 @@ const MemoryLRUCache_1 = require("./MemoryLRUCache");
  * Optimized for Expo applications that may not have MMKV available
  */
 class AsyncStorageCache {
-    constructor(maxMemorySize = 200, ttlHours = 1) {
+    constructor(maxMemorySize = MemoryLRUCache_1.DEFAULT_CACHE_SIZE, ttlHours = 1) {
         this.storagePrefix = 'livei18n_cache_';
+        /**
+         * Reusable eviction handler to keep AsyncStorage in sync with memory cache
+         */
+        this.onEvict = (evictedKey) => {
+            this.removeFromAsyncStorage(evictedKey);
+        };
         this.ttl = ttlHours * 60 * 60 * 1000; // Convert to milliseconds
         this.memoryCache = new MemoryLRUCache_1.MemoryLRUCache(maxMemorySize, ttlHours);
         try {
@@ -48,7 +54,7 @@ class AsyncStorageCache {
                     return;
                 }
                 // Put in memory cache for faster future access
-                this.memoryCache.set(key, item.value);
+                this.memoryCache.set(key, item.value, this.onEvict);
             }
         }
         catch (error) {
@@ -56,8 +62,8 @@ class AsyncStorageCache {
         }
     }
     set(key, value) {
-        // Always store in memory cache for fast access
-        this.memoryCache.set(key, value);
+        // Store in memory cache with eviction callback to keep AsyncStorage in sync
+        this.memoryCache.set(key, value, this.onEvict);
         // Also store in AsyncStorage for persistence (fire and forget)
         this.saveToAsyncStorage(key, value);
     }
@@ -76,6 +82,19 @@ class AsyncStorageCache {
         }
         catch (error) {
             console.warn('LiveI18n: Error writing to AsyncStorage cache:', error);
+        }
+    }
+    /**
+     * Background method to remove from AsyncStorage
+     */
+    async removeFromAsyncStorage(key) {
+        if (!this.asyncStorage)
+            return;
+        try {
+            await this.asyncStorage.removeItem(this.storagePrefix + key);
+        }
+        catch (error) {
+            console.warn('LiveI18n: Error removing from AsyncStorage cache:', error);
         }
     }
     clear() {
@@ -138,7 +157,7 @@ class AsyncStorageCache {
                             const key = fullKey.replace(this.storagePrefix, '');
                             // Check if item has expired
                             if (now - item.timestamp <= this.ttl) {
-                                this.memoryCache.set(key, item.value);
+                                this.memoryCache.set(key, item.value, this.onEvict);
                                 loaded++;
                             }
                             else {

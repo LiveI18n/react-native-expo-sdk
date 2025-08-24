@@ -1,12 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MemoryLRUCache = void 0;
+exports.MemoryLRUCache = exports.DEFAULT_CACHE_SIZE = void 0;
+exports.DEFAULT_CACHE_SIZE = 500;
 /**
  * Memory-based LRU Cache implementation
- * Used as the default cache adapter across all platforms
+ * Used as the default cache for React Native platforms
  */
 class MemoryLRUCache {
-    constructor(maxSize = 500, ttlHours = 1) {
+    constructor(maxSize = exports.DEFAULT_CACHE_SIZE, ttlHours = 1) {
         this.cache = new Map();
         this.maxSize = maxSize;
         this.ttl = ttlHours * 60 * 60 * 1000; // Convert to milliseconds
@@ -25,12 +26,16 @@ class MemoryLRUCache {
         this.cache.set(key, item);
         return item.value;
     }
-    set(key, value) {
+    set(key, value, onEvict) {
         // Remove oldest item if cache is full
         if (this.cache.size >= this.maxSize && !this.cache.has(key)) {
             const firstKey = this.cache.keys().next().value;
             if (firstKey !== undefined) {
                 this.cache.delete(firstKey);
+                // Notify about eviction
+                if (onEvict) {
+                    onEvict(firstKey);
+                }
             }
         }
         this.cache.set(key, {

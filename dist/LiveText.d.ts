@@ -11,8 +11,8 @@ export interface ExpoLiveI18nConfig extends LiveI18nConfig {
     cache?: {
         /** Use persistent AsyncStorage cache */
         persistent?: boolean;
-        /** Memory cache size (default: 500 for memory-only, 200 for hybrid) */
-        memorySize?: number;
+        /** Number of cache entries (default: 500) */
+        entrySize?: number;
         /** Cache TTL in hours (default: 1) */
         ttlHours?: number;
         /** Preload cache on initialization (default: true) */

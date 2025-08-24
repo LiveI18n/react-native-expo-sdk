@@ -43,6 +43,7 @@ const react_1 = __importStar(require("react"));
 const LiveI18n_1 = require("./LiveI18n");
 const ExpoLocaleDetector_1 = require("./ExpoLocaleDetector");
 const AsyncStorageCache_1 = require("./AsyncStorageCache");
+const MemoryLRUCache_1 = require("./MemoryLRUCache");
 // Global instance
 let globalInstance = null;
 /**
@@ -50,25 +51,28 @@ let globalInstance = null;
  * Must be called before using LiveText components
  */
 function initializeLiveI18n(config) {
-    // Create appropriate cache adapter based on configuration
-    let cacheAdapter = config.cacheAdapter;
-    if (!cacheAdapter && config.cache) {
+    // Create appropriate cache based on configuration
+    let cache = undefined;
+    if (config.cache) {
         if (config.cache.persistent !== false) {
             // Use AsyncStorage + memory cache by default
-            const asyncCache = new AsyncStorageCache_1.AsyncStorageCache(config.cache.memorySize || 200, config.cache.ttlHours || 1);
+            cache = new AsyncStorageCache_1.AsyncStorageCache(config.cache.entrySize || MemoryLRUCache_1.DEFAULT_CACHE_SIZE, config.cache.ttlHours || 1);
             // Preload cache if requested (default: true)
             if (config.cache.preload !== false) {
-                asyncCache.preloadCache().catch(error => {
+                cache.preloadCache().catch(error => {
                     console.warn('LiveI18n: Failed to preload cache:', error);
                 });
             }
-            cacheAdapter = asyncCache;
         }
         // If persistent is explicitly false, use default memory cache from core
     }
+    else {
+        // Default to persistent cache (no preload unless explicitly configured)
+        cache = new AsyncStorageCache_1.AsyncStorageCache(MemoryLRUCache_1.DEFAULT_CACHE_SIZE, 1);
+    }
     globalInstance = new LiveI18n_1.LiveI18n({
         ...config,
-        cacheAdapter,
+        cache,
         localeDetector: new ExpoLocaleDetector_1.ExpoLocaleDetector()
     });
 }

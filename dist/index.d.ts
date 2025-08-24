@@ -4,7 +4,7 @@ export { LiveI18n } from './LiveI18n';
 export { AsyncStorageCache } from './AsyncStorageCache';
 export { MemoryLRUCache } from './MemoryLRUCache';
 export { ExpoLocaleDetector } from './ExpoLocaleDetector';
-export type { LiveTextOptions, LiveI18nConfig, CacheAdapter, LocaleDetector, TranslationResponse } from './types';
+export type { LiveTextOptions, LiveI18nConfig, LocaleDetector, TranslationResponse } from './types';
 export { generateCacheKey } from './cacheKey';
 import type { LiveTextOptions } from './types';
 export declare function translate(text: string, options?: LiveTextOptions): Promise<string>;
