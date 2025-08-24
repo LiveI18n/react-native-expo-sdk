@@ -122,10 +122,9 @@ interface ExpoLiveI18nConfig {
   customerId: string;
   endpoint?: string; // Default: 'https://api.livei18n.com'
   defaultLanguage?: string; // e.g., 'es-ES'
-  cacheAdapter?: CacheAdapter; // Custom cache implementation
   cache?: {
     persistent?: boolean; // Use AsyncStorage persistent cache (default: true)
-    memorySize?: number; // Memory cache size (default: 500 for memory-only, 200 for hybrid)
+    entrySize?: number; // Number of cache entries (default: 500)
     ttlHours?: number; // Cache TTL in hours (default: 1)
     preload?: boolean; // Preload cache on initialization (default: true)
   };

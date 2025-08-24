@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { LiveI18n } from './LiveI18n';
-import type { LiveTextOptions, LiveI18nConfig, CacheAdapter } from './types';
+import type { LiveTextOptions, LiveI18nConfig } from './types';
 import { ExpoLocaleDetector } from './ExpoLocaleDetector';
 import { AsyncStorageCache } from './AsyncStorageCache';
+import { DEFAULT_CACHE_SIZE } from './MemoryLRUCache';
 
 // Global instance
 let globalInstance: LiveI18n | null = null;
@@ -17,8 +18,8 @@ export interface ExpoLiveI18nConfig extends LiveI18nConfig {
   cache?: {
     /** Use persistent AsyncStorage cache */
     persistent?: boolean;
-    /** Memory cache size (default: 500 for memory-only, 200 for hybrid) */
-    memorySize?: number;
+    /** Number of cache entries (default: 500) */
+    entrySize?: number;
     /** Cache TTL in hours (default: 1) */
     ttlHours?: number;
     /** Preload cache on initialization (default: true) */
@@ -31,32 +32,33 @@ export interface ExpoLiveI18nConfig extends LiveI18nConfig {
  * Must be called before using LiveText components
  */
 export function initializeLiveI18n(config: ExpoLiveI18nConfig): void {
-  // Create appropriate cache adapter based on configuration
-  let cacheAdapter: CacheAdapter | undefined = config.cacheAdapter;
+  // Create appropriate cache based on configuration
+  let cache: AsyncStorageCache | undefined = undefined;
   
-  if (!cacheAdapter && config.cache) {
+  if (config.cache) {
     if (config.cache.persistent !== false) {
       // Use AsyncStorage + memory cache by default
-      const asyncCache = new AsyncStorageCache(
-        config.cache.memorySize || 200,
+      cache = new AsyncStorageCache(
+        config.cache.entrySize || DEFAULT_CACHE_SIZE,
         config.cache.ttlHours || 1
       );
       
       // Preload cache if requested (default: true)
       if (config.cache.preload !== false) {
-        asyncCache.preloadCache().catch(error => {
+        cache.preloadCache().catch(error => {
           console.warn('LiveI18n: Failed to preload cache:', error);
         });
       }
-      
-      cacheAdapter = asyncCache;
     }
     // If persistent is explicitly false, use default memory cache from core
+  } else {
+    // Default to persistent cache (no preload unless explicitly configured)
+    cache = new AsyncStorageCache(DEFAULT_CACHE_SIZE, 1);
   }
 
   globalInstance = new LiveI18n({
     ...config,
-    cacheAdapter,
+    cache,
     localeDetector: new ExpoLocaleDetector()
   });
 }

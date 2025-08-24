@@ -9,7 +9,6 @@ export interface LiveI18nConfig {
   customerId: string;
   endpoint?: string;
   defaultLanguage?: string;
-  cacheAdapter?: CacheAdapter; // Platform-specific cache adapter
 }
 
 export interface TranslationResponse {
@@ -17,14 +16,6 @@ export interface TranslationResponse {
   locale: string;
   cached: boolean;
   confidence: number;
-}
-
-// Cache adapter interface for platform-specific implementations
-export interface CacheAdapter {
-  get(key: string): string | undefined;
-  set(key: string, value: string): void;
-  clear(): void;
-  size(): number;
 }
 
 // Locale detector interface for platform-specific implementations

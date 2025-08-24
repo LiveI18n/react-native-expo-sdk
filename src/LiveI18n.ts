@@ -1,6 +1,7 @@
-import { MemoryLRUCache } from './MemoryLRUCache';
+import { MemoryLRUCache, DEFAULT_CACHE_SIZE } from './MemoryLRUCache';
+import { AsyncStorageCache } from './AsyncStorageCache';
 import { generateCacheKey } from './cacheKey';
-import type { LiveI18nConfig, LiveTextOptions, TranslationResponse, CacheAdapter, LocaleDetector } from './types';
+import type { LiveI18nConfig, LiveTextOptions, TranslationResponse, LocaleDetector } from './types';
 
 /**
  * Core LiveI18n translation class for React Native
@@ -9,20 +10,23 @@ import type { LiveI18nConfig, LiveTextOptions, TranslationResponse, CacheAdapter
 export class LiveI18n {
   private apiKey: string;
   private customerId: string;
-  private cache: CacheAdapter;
+  private cache: MemoryLRUCache | AsyncStorageCache;
   private endpoint: string;
   private defaultLanguage?: string;
   private localeDetector?: LocaleDetector;
 
-  constructor(config: LiveI18nConfig & { localeDetector?: LocaleDetector }) {
+  constructor(config: LiveI18nConfig & { 
+    localeDetector?: LocaleDetector;
+    cache?: MemoryLRUCache | AsyncStorageCache;
+  }) {
     this.apiKey = config.apiKey;
     this.customerId = config.customerId;
     this.endpoint = config.endpoint || 'https://api.livei18n.com';
     this.defaultLanguage = config.defaultLanguage;
     this.localeDetector = config.localeDetector;
     
-    // Use provided cache adapter or default to memory LRU cache
-    this.cache = config.cacheAdapter || new MemoryLRUCache(500, 1);
+    // Use provided cache or default to memory LRU cache
+    this.cache = config.cache || new MemoryLRUCache(DEFAULT_CACHE_SIZE, 1);
   }
 
   /**

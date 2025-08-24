@@ -1,5 +1,4 @@
-import { MemoryLRUCache } from './MemoryLRUCache';
-import type { CacheAdapter } from './types';
+import { MemoryLRUCache, DEFAULT_CACHE_SIZE } from './MemoryLRUCache';
 
 interface CacheItem {
   value: string;
@@ -10,13 +9,13 @@ interface CacheItem {
  * Hybrid cache that combines fast in-memory LRU cache with AsyncStorage persistence
  * Optimized for Expo applications that may not have MMKV available
  */
-export class AsyncStorageCache implements CacheAdapter {
+export class AsyncStorageCache {
   private memoryCache: MemoryLRUCache;
   private asyncStorage: any;
   private ttl: number;
   private storagePrefix = 'livei18n_cache_';
 
-  constructor(maxMemorySize: number = 200, ttlHours: number = 1) {
+  constructor(maxMemorySize: number = DEFAULT_CACHE_SIZE, ttlHours: number = 1) {
     this.ttl = ttlHours * 60 * 60 * 1000; // Convert to milliseconds
     this.memoryCache = new MemoryLRUCache(maxMemorySize, ttlHours);
     
@@ -29,6 +28,13 @@ export class AsyncStorageCache implements CacheAdapter {
       this.asyncStorage = null;
     }
   }
+
+  /**
+   * Reusable eviction handler to keep AsyncStorage in sync with memory cache
+   */
+  private onEvict = (evictedKey: string): void => {
+    this.removeFromAsyncStorage(evictedKey);
+  };
 
   get(key: string): string | undefined {
     // First, try memory cache (fastest)
@@ -61,7 +67,7 @@ export class AsyncStorageCache implements CacheAdapter {
         }
 
         // Put in memory cache for faster future access
-        this.memoryCache.set(key, item.value);
+        this.memoryCache.set(key, item.value, this.onEvict);
       }
     } catch (error) {
       console.warn('LiveI18n: Error reading from AsyncStorage cache:', error);
@@ -69,8 +75,8 @@ export class AsyncStorageCache implements CacheAdapter {
   }
 
   set(key: string, value: string): void {
-    // Always store in memory cache for fast access
-    this.memoryCache.set(key, value);
+    // Store in memory cache with eviction callback to keep AsyncStorage in sync
+    this.memoryCache.set(key, value, this.onEvict);
 
     // Also store in AsyncStorage for persistence (fire and forget)
     this.saveToAsyncStorage(key, value);
@@ -90,6 +96,19 @@ export class AsyncStorageCache implements CacheAdapter {
       await this.asyncStorage.setItem(this.storagePrefix + key, JSON.stringify(item));
     } catch (error) {
       console.warn('LiveI18n: Error writing to AsyncStorage cache:', error);
+    }
+  }
+
+  /**
+   * Background method to remove from AsyncStorage
+   */
+  private async removeFromAsyncStorage(key: string): Promise<void> {
+    if (!this.asyncStorage) return;
+
+    try {
+      await this.asyncStorage.removeItem(this.storagePrefix + key);
+    } catch (error) {
+      console.warn('LiveI18n: Error removing from AsyncStorage cache:', error);
     }
   }
 
@@ -160,7 +179,7 @@ export class AsyncStorageCache implements CacheAdapter {
               
               // Check if item has expired
               if (now - item.timestamp <= this.ttl) {
-                this.memoryCache.set(key, item.value);
+                this.memoryCache.set(key, item.value, this.onEvict);
                 loaded++;
               } else {
                 // Remove expired item
