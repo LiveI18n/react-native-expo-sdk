@@ -1,5 +1,4 @@
 import React from 'react';
-import { LiveI18n } from './LiveI18n';
 import type { LiveTextOptions, LiveI18nConfig } from './types';
 /**
  * Enhanced configuration for Expo with cache options
@@ -20,15 +19,14 @@ export interface ExpoLiveI18nConfig extends LiveI18nConfig {
     };
 }
 /**
- * Initialize the global LiveI18n instance for Expo
- * Must be called before using LiveText components
+ * React Context Provider for LiveI18n
+ * Provides a cleaner alternative to the global instance pattern
  */
-export declare function initializeLiveI18n(config: ExpoLiveI18nConfig): void;
-/**
- * Get the global LiveI18n instance
- * Logs error if not initialized instead of throwing
- */
-export declare function getLiveI18nInstance(): LiveI18n | null;
+export interface LiveI18nProviderProps {
+    config: ExpoLiveI18nConfig;
+    children: React.ReactNode;
+}
+export declare const LiveI18nProvider: React.FC<LiveI18nProviderProps>;
 /**
  * Expo component for automatic text translation
  * Uses React Native Text component with Expo-specific optimizations
@@ -47,6 +45,7 @@ export interface LiveTextProps extends LiveTextOptions {
 export declare const LiveText: React.FC<LiveTextProps>;
 /**
  * Hook for programmatic translation access with Expo-specific utilities
+ * Must be used within LiveI18nProvider
  */
 export declare function useLiveI18n(): {
     translate: (text: string, options?: LiveTextOptions) => Promise<string>;
@@ -62,11 +61,3 @@ export declare function useLiveI18n(): {
     getDetailedLocale: () => any;
     isRTL: () => boolean;
 };
-/**
- * Update the default language of the global instance
- */
-export declare function updateDefaultLanguage(language?: string): void;
-/**
- * Get the current default language of the global instance
- */
-export declare function getDefaultLanguage(): string | undefined;

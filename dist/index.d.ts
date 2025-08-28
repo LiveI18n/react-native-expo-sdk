@@ -1,10 +1,8 @@
-export { LiveText, initializeLiveI18n, useLiveI18n, getLiveI18nInstance, updateDefaultLanguage, getDefaultLanguage } from './LiveText';
-export type { ExpoLiveI18nConfig } from './LiveText';
+export { LiveText, LiveI18nProvider, useLiveI18n } from './LiveText';
+export type { ExpoLiveI18nConfig, LiveI18nProviderProps } from './LiveText';
 export { LiveI18n } from './LiveI18n';
 export { AsyncStorageCache } from './AsyncStorageCache';
 export { MemoryLRUCache } from './MemoryLRUCache';
 export { ExpoLocaleDetector } from './ExpoLocaleDetector';
 export type { LiveTextOptions, LiveI18nConfig, LocaleDetector, TranslationResponse } from './types';
 export { generateCacheKey } from './cacheKey';
-import type { LiveTextOptions } from './types';
-export declare function translate(text: string, options?: LiveTextOptions): Promise<string>;

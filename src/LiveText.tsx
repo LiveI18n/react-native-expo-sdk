@@ -1,12 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, createContext, useContext } from 'react';
 import { LiveI18n } from './LiveI18n';
 import type { LiveTextOptions, LiveI18nConfig } from './types';
 import { ExpoLocaleDetector } from './ExpoLocaleDetector';
 import { AsyncStorageCache } from './AsyncStorageCache';
 import { DEFAULT_CACHE_SIZE } from './MemoryLRUCache';
 
-// Global instance
-let globalInstance: LiveI18n | null = null;
+// React Context for LiveI18n
+interface LiveI18nContextValue {
+  instance: LiveI18n | null;
+  defaultLanguage: string | undefined;
+  updateDefaultLanguage: (language?: string) => void;
+}
+
+const LiveI18nContext = createContext<LiveI18nContextValue>({
+  instance: null,
+  defaultLanguage: undefined,
+  updateDefaultLanguage: () => {}
+});
 
 /**
  * Enhanced configuration for Expo with cache options
@@ -27,53 +37,70 @@ export interface ExpoLiveI18nConfig extends LiveI18nConfig {
   };
 }
 
+
 /**
- * Initialize the global LiveI18n instance for Expo
- * Must be called before using LiveText components
+ * React Context Provider for LiveI18n
+ * Provides a cleaner alternative to the global instance pattern
  */
-export function initializeLiveI18n(config: ExpoLiveI18nConfig): void {
-  // Create appropriate cache based on configuration
-  let cache: AsyncStorageCache | undefined = undefined;
-  
-  if (config.cache) {
-    if (config.cache.persistent !== false) {
-      // Use AsyncStorage + memory cache by default
-      cache = new AsyncStorageCache(
-        config.cache.entrySize || DEFAULT_CACHE_SIZE,
-        config.cache.ttlHours || 1
-      );
-      
-      // Preload cache if requested (default: true)
-      if (config.cache.preload !== false) {
-        cache.preloadCache().catch(error => {
-          console.warn('LiveI18n: Failed to preload cache:', error);
-        });
+export interface LiveI18nProviderProps {
+  config: ExpoLiveI18nConfig;
+  children: React.ReactNode;
+}
+
+export const LiveI18nProvider: React.FC<LiveI18nProviderProps> = ({ config, children }) => {
+  const [instance] = useState<LiveI18n>(() => {
+    // Create appropriate cache based on configuration
+    let cache: AsyncStorageCache | undefined = undefined;
+    
+    if (config.cache) {
+      if (config.cache.persistent !== false) {
+        // Use AsyncStorage + memory cache by default
+        cache = new AsyncStorageCache(
+          config.cache.entrySize || DEFAULT_CACHE_SIZE,
+          config.cache.ttlHours || 1
+        );
+        
+        // Preload cache if requested (default: true)
+        if (config.cache.preload !== false) {
+          cache.preloadCache().catch(error => {
+            console.warn('LiveI18n: Failed to preload cache:', error);
+          });
+        }
       }
+      // If persistent is explicitly false, use default memory cache from core
+    } else {
+      // Default to persistent cache (no preload unless explicitly configured)
+      cache = new AsyncStorageCache(DEFAULT_CACHE_SIZE, 1);
     }
-    // If persistent is explicitly false, use default memory cache from core
-  } else {
-    // Default to persistent cache (no preload unless explicitly configured)
-    cache = new AsyncStorageCache(DEFAULT_CACHE_SIZE, 1);
-  }
 
-  globalInstance = new LiveI18n({
-    ...config,
-    cache,
-    localeDetector: new ExpoLocaleDetector()
+    return new LiveI18n({
+      ...config,
+      cache,
+      localeDetector: new ExpoLocaleDetector()
+    });
   });
-}
+  
+  const [defaultLanguage, setDefaultLanguage] = useState<string | undefined>(
+    instance.getDefaultLanguage()
+  );
 
-/**
- * Get the global LiveI18n instance
- * Logs error if not initialized instead of throwing
- */
-export function getLiveI18nInstance(): LiveI18n | null {
-  if (!globalInstance) {
-    console.error('LiveI18n not initialized. Call initializeLiveI18n() first.');
-    return null;
-  }
-  return globalInstance;
-}
+  const updateDefaultLanguage = useCallback((language?: string) => {
+    instance.updateDefaultLanguage(language);
+    setDefaultLanguage(language);
+  }, [instance]);
+
+  const contextValue = useCallback(() => ({
+    instance,
+    defaultLanguage,
+    updateDefaultLanguage
+  }), [instance, defaultLanguage, updateDefaultLanguage]);
+
+  return (
+    <LiveI18nContext.Provider value={contextValue()}>
+      {children}
+    </LiveI18nContext.Provider>
+  );
+};
 
 /**
  * Extract string content from React.ReactNode
@@ -135,6 +162,15 @@ export const LiveText: React.FC<LiveTextProps> = ({
   const [translated, setTranslated] = useState(textContent);
   const [isLoading, setIsLoading] = useState(true);
   const [attempts, setAttempts] = useState(0);
+  
+  const contextValue = useContext(LiveI18nContext);
+  
+  if (!contextValue.instance) {
+    throw new Error('LiveText must be used within LiveI18nProvider');
+  }
+
+  const instance = contextValue.instance;
+  const defaultLanguage = contextValue.defaultLanguage;
 
   useEffect(() => {
     // if we are on a second attempt set loading to false
@@ -146,12 +182,6 @@ export const LiveText: React.FC<LiveTextProps> = ({
   }, [attempts, isLoading]);
 
   useEffect(() => {
-    if (!globalInstance) {
-      setIsLoading(false);
-      console.error('LiveI18n not initialized. Call initializeLiveI18n() first.');
-      return;
-    }
-
     // Don't translate empty strings
     if (!textContent.trim()) {
       setIsLoading(false);
@@ -164,7 +194,7 @@ export const LiveText: React.FC<LiveTextProps> = ({
       setAttempts(attempt);
     };
 
-    globalInstance
+    instance
       .translate(textContent, { tone, context, language }, onRetry)
       .then((result) => {
         setTranslated(result);
@@ -178,77 +208,58 @@ export const LiveText: React.FC<LiveTextProps> = ({
       .finally(() => {
         setIsLoading(false);
       });
-  }, [textContent, tone, context, language, fallback, onTranslationComplete, onError]);
+  }, [
+    textContent, 
+    tone, 
+    context, 
+    language, 
+    defaultLanguage, 
+    fallback, 
+    onTranslationComplete, 
+    onError, 
+    instance
+  ]);
 
   return <>{translated}</>;
 };
 
 /**
  * Hook for programmatic translation access with Expo-specific utilities
+ * Must be used within LiveI18nProvider
  */
 export function useLiveI18n() {
-  const instance = getLiveI18nInstance();
+  const context = useContext(LiveI18nContext);
+  
+  if (!context.instance) {
+    throw new Error('useLiveI18n must be used within LiveI18nProvider');
+  }
+
+  const instance = context.instance; // TypeScript now knows this is not null
 
   const translate = async (text: string, options?: LiveTextOptions): Promise<string> => {
-    if (!instance) {
-      console.warn('LiveI18n not initialized, returning original text');
-      return text;
-    }
     return instance.translate(text, options);
   };
 
   return {
     translate,
-    defaultLanguage: instance?.getDefaultLanguage(),
-    clearCache: () => instance?.clearCache(),
-    getCacheStats: () => instance?.getCacheStats() || { size: 0, maxSize: 0 },
-    updateDefaultLanguage: (language?: string) => instance?.updateDefaultLanguage(language),
-    getDefaultLanguage: () => instance?.getDefaultLanguage(),
+    defaultLanguage: context.defaultLanguage,
+    clearCache: () => instance.clearCache(),
+    getCacheStats: () => instance.getCacheStats() || { size: 0, maxSize: 0 },
+    updateDefaultLanguage: context.updateDefaultLanguage,
+    getDefaultLanguage: () => instance.getDefaultLanguage(),
     // Expo specific utilities
     getPreferredLocales: () => {
-      if (globalInstance) {
-        const detector = new ExpoLocaleDetector();
-        return detector.getPreferredLocales();
-      }
-      return ['en-US'];
+      const detector = new ExpoLocaleDetector();
+      return detector.getPreferredLocales();
     },
     getDetailedLocale: () => {
-      if (globalInstance) {
-        const detector = new ExpoLocaleDetector();
-        return detector.getDetailedLocale();
-      }
-      return { languageTag: 'en-US' };
+      const detector = new ExpoLocaleDetector();
+      return detector.getDetailedLocale();
     },
     isRTL: () => {
-      if (globalInstance) {
-        const detector = new ExpoLocaleDetector();
-        return detector.isRTL();
-      }
-      return false;
+      const detector = new ExpoLocaleDetector();
+      return detector.isRTL();
     }
   };
 }
 
-/**
- * Update the default language of the global instance
- */
-export function updateDefaultLanguage(language?: string): void {
-  const instance = getLiveI18nInstance();
-  if (!instance) {
-    console.warn('LiveI18n not initialized, cannot update default language');
-    return;
-  }
-  instance.updateDefaultLanguage(language);
-}
-
-/**
- * Get the current default language of the global instance
- */
-export function getDefaultLanguage(): string | undefined {
-  const instance = getLiveI18nInstance();
-  if (!instance) {
-    console.warn('LiveI18n not initialized, cannot get default language');
-    return undefined;
-  }
-  return instance.getDefaultLanguage();
-}
