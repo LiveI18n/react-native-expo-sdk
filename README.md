@@ -6,6 +6,7 @@ Real-time AI-powered translation SDK optimized for Expo applications. Translate 
 
 - ⚡ **Real-time AI Translation** - Powered by advanced language models
 - 🥇 **Expo Optimized** - Built specifically for Expo managed workflow
+- ⚡ **Request Batching** - Multiple translation requests are batched for efficiency (10 requests or 50ms timeout)
 - 🚀 **High Performance** - Intelligent hybrid caching with AsyncStorage persistence  
 - 🌍 **Expo Localization** - Automatic locale detection using `expo-localization`
 - 🔄 **Smart Retry Logic** - Robust error handling with exponential backoff
@@ -32,23 +33,31 @@ npx expo install expo-localization @react-native-async-storage/async-storage
 
 ## Quick Start
 
-### 1. Initialize the SDK
+### 1. Wrap Your App with Provider
 
 ```typescript
-import { initializeLiveI18n } from '@livei18n/react-native-expo-sdk';
+import React from 'react';
+import { LiveI18nProvider } from '@livei18n/react-native-expo-sdk';
+import YourApp from './YourApp';
 
-// Initialize at app startup (in App.js/App.tsx)
-initializeLiveI18n({
-  apiKey: 'your-api-key',
-  customerId: 'your-customer-id',
-  defaultLanguage: 'es-ES',
-  cache: {
-    persistent: true, // Use AsyncStorage for persistence
-    memorySize: 200,
-    ttlHours: 24,
-    preload: true // Preload cache on startup for better performance
-  }
-});
+export default function App() {
+  return (
+    <LiveI18nProvider config={{
+      apiKey: 'your-api-key',
+      customerId: 'your-customer-id',
+      defaultLanguage: 'es-ES',
+      batch_requests: true, // Enable batching for efficiency
+      cache: {
+        persistent: true, // Use AsyncStorage for persistence
+        entrySize: 500,
+        ttlHours: 24,
+        preload: true // Preload cache on startup for better performance
+      }
+    }}>
+      <YourApp />
+    </LiveI18nProvider>
+  );
+}
 ```
 
 ### 2. Use the LiveText Component
@@ -80,14 +89,17 @@ const MyComponent = () => {
 ### 3. Programmatic Translation with Expo Features
 
 ```typescript
-import { useLiveI18n, translate } from '@livei18n/react-native-expo-sdk';
+import React from 'react';
+import { useLiveI18n } from '@livei18n/react-native-expo-sdk';
 
 const MyComponent = () => {
   const { 
     translate: translateText, 
     getPreferredLocales,
     getDetailedLocale,
-    isRTL 
+    isRTL,
+    updateDefaultLanguage,
+    defaultLanguage
   } = useLiveI18n();
 
   const handleTranslate = async () => {
@@ -106,8 +118,12 @@ const MyComponent = () => {
     console.log({ locales, detailed, rightToLeft });
   };
 
+  const changeLanguage = (language: string) => {
+    updateDefaultLanguage(language);
+  };
+
   return (
-    // Your component JSX
+    // Your component JSX with access to all translation utilities
   );
 };
 ```
@@ -122,6 +138,8 @@ interface ExpoLiveI18nConfig {
   customerId: string;
   endpoint?: string; // Default: 'https://api.livei18n.com'
   defaultLanguage?: string; // e.g., 'es-ES'
+  batch_requests?: boolean; // Enable request batching for efficiency (default: true)
+  debug?: boolean; // Enable debug logging (default: false)
   cache?: {
     persistent?: boolean; // Use AsyncStorage persistent cache (default: true)
     entrySize?: number; // Number of cache entries (default: 500)
@@ -131,32 +149,68 @@ interface ExpoLiveI18nConfig {
 }
 ```
 
+## Request Batching
+
+By default, the SDK automatically batches translation requests that aren't found in cache for improved performance:
+
+```typescript
+<LiveI18nProvider config={{
+  apiKey: 'your-api-key',
+  customerId: 'your-customer-id',
+  batch_requests: true  // Default: true
+}}>
+  <View>
+    {/* These requests will be batched together if not cached */}
+    <Text><LiveText>Hello</LiveText></Text>
+    <Text><LiveText>World</LiveText></Text>
+    <Text><LiveText>Welcome</LiveText></Text>
+  </View>
+</LiveI18nProvider>
+```
+
+**Batching behavior:**
+- Only requests that miss cache are batched
+- Batches are sent when 10 requests are queued OR after 50ms timeout
+- If batch API fails, individual requests are sent as fallback
+- Can be disabled by setting `batch_requests: false`
+
+**Benefits:**
+- Reduces API calls and improves performance
+- More efficient for apps with many simultaneous translations
+- Transparent to your components - no code changes needed
+- Especially beneficial on mobile where network requests are more expensive
+
 ## Caching Options
 
 ### AsyncStorage Persistent Caching (Recommended)
 ```typescript
-initializeLiveI18n({
+<LiveI18nProvider config={{
   apiKey: 'your-api-key',
   customerId: 'your-customer-id',
+  batch_requests: true,
   cache: {
     persistent: true,  // Enables AsyncStorage + memory hybrid cache
-    memorySize: 200,   // Smaller memory cache for hybrid mode
+    entrySize: 500,    // Cache entries
     ttlHours: 24,      // 24-hour cache TTL
     preload: true      // Preload cache on app startup
   }
-});
+}}>
+  <YourApp />
+</LiveI18nProvider>
 ```
 
 ### Memory-Only Caching
 ```typescript
-initializeLiveI18n({
+<LiveI18nProvider config={{
   apiKey: 'your-api-key',
   customerId: 'your-customer-id',
   cache: {
     persistent: false, // Disables AsyncStorage
-    memorySize: 500    // Larger memory cache for memory-only mode
+    entrySize: 500     // Memory cache entries
   }
-});
+}}>
+  <YourApp />
+</LiveI18nProvider>
 ```
 
 ## API Reference
@@ -197,16 +251,19 @@ Returns an object with translation utilities:
 }
 ```
 
-### Functions
+### Hooks
 
-#### `initializeLiveI18n(config)`
-Initialize the global SDK instance. Must be called before using components.
+#### `useLiveI18n()`
+Main hook for accessing all SDK functionality. Must be used within LiveI18nProvider.
 
-#### `translate(text, options?)`
-Direct translation function for use outside components.
-
-#### `getLiveI18nInstance()`
-Get the global SDK instance for advanced usage.
+Returns an object with:
+- `translate()` - Programmatic translation function
+- `defaultLanguage` - Current default language
+- `updateDefaultLanguage()` - Change the default language
+- `clearCache()` - Clear translation cache
+- `getPreferredLocales()` - Get device's preferred languages
+- `getDetailedLocale()` - Get detailed locale information
+- `isRTL()` - Check if current language is right-to-left
 
 ## Expo-Specific Features
 
@@ -236,17 +293,27 @@ const isRightToLeft = isRTL(); // true for Arabic, Hebrew, etc.
 The AsyncStorage cache can preload translations on app startup:
 
 ```typescript
-// Automatic preloading (default)
-initializeLiveI18n({
-  cache: { preload: true } // Loads up to 50 recent translations
-});
+// Automatic preloading (recommended)
+<LiveI18nProvider config={{
+  apiKey: 'your-api-key',
+  customerId: 'your-customer-id',
+  cache: { preload: true } // Loads recent translations on startup
+}}>
+  <YourApp />
+</LiveI18nProvider>
 
-// Manual preloading
-import { getLiveI18nInstance } from '@livei18n/react-native-expo-sdk';
-
-const instance = getLiveI18nInstance();
-if (instance && instance.cache instanceof AsyncStorageCache) {
-  await instance.cache.preloadCache(100); // Load up to 100 entries
+// Clear cache when needed
+function SettingsScreen() {
+  const { clearCache } = useLiveI18n();
+  
+  const handleClearCache = () => {
+    clearCache();
+    console.log('Translation cache cleared');
+  };
+  
+  return (
+    <Button title="Clear Cache" onPress={handleClearCache} />
+  );
 }
 ```
 
@@ -259,11 +326,11 @@ if (instance && instance.cache instanceof AsyncStorageCache) {
 
 ### Best Practices
 
-1. **Initialize Early**: Call `initializeLiveI18n()` in your app's root component
+1. **Wrap Early**: Place `<LiveI18nProvider>` at your app's root level
 2. **Enable Preloading**: Set `preload: true` for better startup performance
 3. **Wrap with Text**: Always wrap `<LiveText>` with React Native's `<Text>` component
-4. **Handle RTL**: Use `isRTL()` to adjust layout for right-to-left languages
-5. **Cache Management**: Monitor cache size and clear when needed
+4. **Handle RTL**: Use `isRTL()` from `useLiveI18n()` to adjust layout for right-to-left languages
+5. **Cache Management**: Use `clearCache()` when needed to free memory
 
 ## Expo Setup
 

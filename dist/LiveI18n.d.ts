@@ -11,7 +11,11 @@ export declare class LiveI18n {
     private cache;
     private endpoint;
     private defaultLanguage?;
+    private debug;
+    private batchRequests;
     private localeDetector?;
+    private translationQueue;
+    private queueTimer;
     constructor(config: LiveI18nConfig & {
         localeDetector?: LocaleDetector;
         cache?: MemoryLRUCache | AsyncStorageCache;
@@ -20,6 +24,7 @@ export declare class LiveI18n {
      * Sleep for a given number of milliseconds
      */
     private sleep;
+    private debugLog;
     /**
      * Make a single translation request attempt
      */
@@ -30,6 +35,22 @@ export declare class LiveI18n {
      * Retries up to 5 times with exponential backoff, max 5 seconds total
      */
     translate(text: string, options?: LiveTextOptions, onRetry?: (attempt: number) => void): Promise<string>;
+    /**
+     * Make individual translation (existing logic moved here)
+     */
+    private makeIndividualTranslation;
+    /**
+     * Add translation request to batch queue
+     */
+    private addToQueue;
+    /**
+     * Flush the translation queue
+     */
+    private flushQueue;
+    /**
+     * Make batch translation request to API
+     */
+    private translateBatch;
     /**
      * Clear local cache
      */

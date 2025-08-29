@@ -9,6 +9,8 @@ export interface LiveI18nConfig {
   customerId: string;
   endpoint?: string;
   defaultLanguage?: string;
+  debug?: boolean;
+  batch_requests?: boolean;
 }
 
 export interface TranslationResponse {
@@ -21,4 +23,31 @@ export interface TranslationResponse {
 // Locale detector interface for platform-specific implementations
 export interface LocaleDetector {
   detectLocale(): string;
+}
+
+// Batching-related types
+export interface QueuedTranslation {
+  text: string;
+  options?: LiveTextOptions;
+  cacheKey: string;
+  resolve: (result: string) => void;
+  reject: (error: Error) => void;
+}
+
+export interface BatchTranslationRequest {
+  text: string;
+  locale: string;
+  tone: string;
+  context: string;
+  cache_key: string;
+}
+
+export interface BatchTranslationResponse {
+  responses: Array<{
+    cache_key: string;
+    translated: string;
+    confidence: number;
+    cached?: boolean;
+    error?: string;
+  }>;
 }
