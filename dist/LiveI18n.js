@@ -9,6 +9,7 @@ const cacheKey_1 = require("./cacheKey");
  */
 class LiveI18n {
     constructor(config) {
+        var _a;
         // Batching-related properties
         this.translationQueue = [];
         this.queueTimer = null;
@@ -17,7 +18,7 @@ class LiveI18n {
         this.endpoint = config.endpoint || 'https://api.livei18n.com';
         this.defaultLanguage = config.defaultLanguage;
         this.debug = config.debug || false;
-        this.batchRequests = config.batch_requests || true;
+        this.batchRequests = (_a = config.batch_requests) !== null && _a !== void 0 ? _a : true;
         this.localeDetector = config.localeDetector;
         // Use provided cache or default to memory LRU cache
         this.cache = config.cache || new MemoryLRUCache_1.MemoryLRUCache(MemoryLRUCache_1.DEFAULT_CACHE_SIZE, 1);
@@ -188,7 +189,6 @@ class LiveI18n {
      * Flush the translation queue
      */
     async flushQueue() {
-        var _a, _b, _c;
         // Clear the timer
         if (this.queueTimer) {
             clearTimeout(this.queueTimer);
@@ -202,43 +202,61 @@ class LiveI18n {
             return;
         }
         this.debugLog(`Flushing queue with ${currentQueue.length} translations`);
-        try {
-            // Call batch translation API
-            const results = await this.translateBatch(currentQueue);
-            // Resolve each promise with its result
-            for (let i = 0; i < currentQueue.length; i++) {
-                const queueItem = currentQueue[i];
-                const result = results[i];
-                if (result) {
-                    // Cache the result locally
-                    this.cache.set(queueItem.cacheKey, result);
-                    queueItem.resolve(result);
-                }
-                else {
-                    // Fallback to original text if no result
-                    queueItem.resolve(queueItem.text);
-                }
+        // Call batch translation API with retry (never throws)
+        const results = await this.translateBatchWithRetry(currentQueue);
+        // Resolve each promise with its result
+        for (let i = 0; i < currentQueue.length; i++) {
+            const queueItem = currentQueue[i];
+            const result = results[i];
+            // Check if result is different from original text (successful translation)
+            if (result && result !== queueItem.text) {
+                // Cache the successful translation locally
+                this.cache.set(queueItem.cacheKey, result);
+                queueItem.resolve(result);
+            }
+            else {
+                // Return original text for failed translations (already handled by retry logic)
+                queueItem.resolve(queueItem.text);
             }
         }
-        catch (error) {
-            this.debugLog('Batch translation failed, falling back to individual requests');
-            // Detect locale once for efficiency
-            const detectedLocale = this.detectLocale();
-            // Fallback: process each translation individually
-            for (const queueItem of currentQueue) {
-                try {
-                    const locale = ((_a = queueItem.options) === null || _a === void 0 ? void 0 : _a.language) || this.defaultLanguage || detectedLocale;
-                    const tone = (((_b = queueItem.options) === null || _b === void 0 ? void 0 : _b.tone) || '').substring(0, 50);
-                    const context = (((_c = queueItem.options) === null || _c === void 0 ? void 0 : _c.context) || '').substring(0, 500);
-                    const result = await this.makeIndividualTranslation(queueItem.text, locale, tone, context, queueItem.cacheKey);
-                    queueItem.resolve(result);
+    }
+    /**
+     * Make batch translation request with retry logic
+     * Never throws - always returns results array (original text for failures)
+     */
+    async translateBatchWithRetry(queuedTranslations) {
+        const maxRetries = 1; // Single retry for batch requests
+        const retryDelay = 500; // 500ms delay before retry
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                this.debugLog(`Batch translation attempt ${attempt + 1}/${maxRetries + 1}`);
+                return await this.translateBatch(queuedTranslations);
+            }
+            catch (error) {
+                const isLastAttempt = attempt === maxRetries;
+                // Check if it's a 4xx error - don't retry client errors
+                let shouldRetry = true;
+                if ((error === null || error === void 0 ? void 0 : error.message) && error.message.includes('Batch API error:')) {
+                    const statusMatch = error.message.match(/Batch API error: (\d+)/);
+                    if (statusMatch) {
+                        const statusCode = parseInt(statusMatch[1]);
+                        if (statusCode >= 400 && statusCode < 500) {
+                            this.debugLog(`4xx error (${statusCode}), not retrying batch translation`);
+                            shouldRetry = false;
+                        }
+                    }
                 }
-                catch (individualError) {
-                    console.error('Individual fallback translation failed:', individualError);
-                    queueItem.reject(individualError);
+                if (isLastAttempt || !shouldRetry) {
+                    this.debugLog(`Batch translation failed after ${attempt + 1} attempts, returning original text for all`);
+                    // Return original text for all translations instead of throwing
+                    return queuedTranslations.map(q => q.text);
                 }
+                this.debugLog(`Batch translation attempt ${attempt + 1} failed, retrying in ${retryDelay}ms:`, (error === null || error === void 0 ? void 0 : error.message) || error);
+                await this.sleep(retryDelay);
             }
         }
+        // Fallback - should never reach here, but return original text if we do
+        return queuedTranslations.map(q => q.text);
     }
     /**
      * Make batch translation request to API
