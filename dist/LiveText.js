@@ -187,6 +187,7 @@ function useLiveI18n() {
         getCacheStats: () => instance.getCacheStats() || { size: 0, maxSize: 0 },
         updateDefaultLanguage: context.updateDefaultLanguage,
         getDefaultLanguage: () => instance.getDefaultLanguage(),
+        getSupportedLanguages: (all) => instance.getSupportedLanguages(all),
         // Expo specific utilities
         getPreferredLocales: () => {
             const detector = new ExpoLocaleDetector_1.ExpoLocaleDetector();

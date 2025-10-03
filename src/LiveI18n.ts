@@ -1,7 +1,7 @@
 import { MemoryLRUCache, DEFAULT_CACHE_SIZE } from './MemoryLRUCache';
 import { AsyncStorageCache } from './AsyncStorageCache';
 import { generateCacheKey } from './cacheKey';
-import type { LiveI18nConfig, LiveTextOptions, TranslationResponse, LocaleDetector, QueuedTranslation, BatchTranslationRequest, BatchTranslationResponse } from './types';
+import type { LiveI18nConfig, LiveTextOptions, TranslationResponse, LocaleDetector, QueuedTranslation, BatchTranslationRequest, BatchTranslationResponse, SupportedLanguagesResponse } from './types';
 
 /**
  * Core LiveI18n translation class for React Native
@@ -20,6 +20,9 @@ export class LiveI18n {
   // Batching-related properties
   private translationQueue: QueuedTranslation[] = [];
   private queueTimer: number | null = null;
+  
+  // Supported languages cache
+  private supportedLanguagesCache: { [key: string]: { data: SupportedLanguagesResponse; timestamp: number } } = {};
 
   constructor(config: LiveI18nConfig & { 
     localeDetector?: LocaleDetector;
@@ -454,6 +457,55 @@ export class LiveI18n {
    */
   getDefaultLanguage(): string | undefined {
     return this.defaultLanguage;
+  }
+
+  /**
+   * Get supported languages from the API
+   * @param all - If true, returns all supported languages. If false/undefined, returns top 20
+   * @returns Promise resolving to supported languages response
+   */
+  async getSupportedLanguages(all?: boolean): Promise<SupportedLanguagesResponse> {
+    const cacheKey = all ? 'all' : 'top20';
+    const CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
+    
+    // Check cache first
+    const cached = this.supportedLanguagesCache[cacheKey];
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+      this.debugLog(`Found supported languages in cache (${cacheKey})`);
+      return cached.data;
+    }
+    
+    try {
+      this.debugLog(`Fetching supported languages from API (${cacheKey})`);
+      
+      const url = `${this.endpoint}/api/v1/languages/supported${all ? '?all=true' : ''}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Supported languages API error: ${response.status} ${response.statusText}`);
+      }
+
+      const result: SupportedLanguagesResponse = await response.json();
+      
+      // Cache the result
+      this.supportedLanguagesCache[cacheKey] = {
+        data: result,
+        timestamp: Date.now()
+      };
+      
+      this.debugLog(`Cached supported languages (${cacheKey}), total: ${result.total}`);
+      
+      return result;
+    } catch (error: any) {
+      console.error('LiveI18n: Failed to fetch supported languages:', error);
+      throw error;
+    }
   }
 
   /**

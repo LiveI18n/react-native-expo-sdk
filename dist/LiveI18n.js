@@ -13,6 +13,8 @@ class LiveI18n {
         // Batching-related properties
         this.translationQueue = [];
         this.queueTimer = null;
+        // Supported languages cache
+        this.supportedLanguagesCache = {};
         this.apiKey = config.apiKey;
         this.customerId = config.customerId;
         this.endpoint = config.endpoint || 'https://api.livei18n.com';
@@ -365,6 +367,46 @@ class LiveI18n {
      */
     getDefaultLanguage() {
         return this.defaultLanguage;
+    }
+    /**
+     * Get supported languages from the API
+     * @param all - If true, returns all supported languages. If false/undefined, returns top 20
+     * @returns Promise resolving to supported languages response
+     */
+    async getSupportedLanguages(all) {
+        const cacheKey = all ? 'all' : 'top20';
+        const CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
+        // Check cache first
+        const cached = this.supportedLanguagesCache[cacheKey];
+        if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+            this.debugLog(`Found supported languages in cache (${cacheKey})`);
+            return cached.data;
+        }
+        try {
+            this.debugLog(`Fetching supported languages from API (${cacheKey})`);
+            const url = `${this.endpoint}/api/v1/languages/supported${all ? '?all=true' : ''}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) {
+                throw new Error(`Supported languages API error: ${response.status} ${response.statusText}`);
+            }
+            const result = await response.json();
+            // Cache the result
+            this.supportedLanguagesCache[cacheKey] = {
+                data: result,
+                timestamp: Date.now()
+            };
+            this.debugLog(`Cached supported languages (${cacheKey}), total: ${result.total}`);
+            return result;
+        }
+        catch (error) {
+            console.error('LiveI18n: Failed to fetch supported languages:', error);
+            throw error;
+        }
     }
     /**
      * Detect locale using platform-specific detector or fallback

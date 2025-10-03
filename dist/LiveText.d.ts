@@ -57,6 +57,7 @@ export declare function useLiveI18n(): {
     };
     updateDefaultLanguage: (language?: string) => void;
     getDefaultLanguage: () => string;
+    getSupportedLanguages: (all?: boolean) => Promise<import("./types").SupportedLanguagesResponse>;
     getPreferredLocales: () => string[];
     getDetailedLocale: () => any;
     isRTL: () => boolean;

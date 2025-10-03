@@ -1,6 +1,6 @@
 import { MemoryLRUCache } from './MemoryLRUCache';
 import { AsyncStorageCache } from './AsyncStorageCache';
-import type { LiveI18nConfig, LiveTextOptions, LocaleDetector } from './types';
+import type { LiveI18nConfig, LiveTextOptions, LocaleDetector, SupportedLanguagesResponse } from './types';
 /**
  * Core LiveI18n translation class for React Native
  * Includes platform-agnostic translation logic with React Native optimizations
@@ -16,6 +16,7 @@ export declare class LiveI18n {
     private localeDetector?;
     private translationQueue;
     private queueTimer;
+    private supportedLanguagesCache;
     constructor(config: LiveI18nConfig & {
         localeDetector?: LocaleDetector;
         cache?: MemoryLRUCache | AsyncStorageCache;
@@ -75,6 +76,12 @@ export declare class LiveI18n {
      * Get the current default language
      */
     getDefaultLanguage(): string | undefined;
+    /**
+     * Get supported languages from the API
+     * @param all - If true, returns all supported languages. If false/undefined, returns top 20
+     * @returns Promise resolving to supported languages response
+     */
+    getSupportedLanguages(all?: boolean): Promise<SupportedLanguagesResponse>;
     /**
      * Detect locale using platform-specific detector or fallback
      */

@@ -19,7 +19,7 @@ export { MemoryLRUCache } from './MemoryLRUCache';
 export { ExpoLocaleDetector } from './ExpoLocaleDetector';
 
 // Core types for convenience
-export type { LiveTextOptions, LiveI18nConfig, LocaleDetector, TranslationResponse } from './types';
+export type { LiveTextOptions, LiveI18nConfig, LocaleDetector, TranslationResponse, SupportedLanguage, SupportedLanguagesResponse } from './types';
 
 // Cache key generation
 export { generateCacheKey } from './cacheKey';
