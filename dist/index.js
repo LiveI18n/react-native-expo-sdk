@@ -1,11 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateCacheKey = exports.ExpoLocaleDetector = exports.MemoryLRUCache = exports.AsyncStorageCache = exports.LiveI18n = exports.useLiveI18n = exports.LiveI18nProvider = exports.LiveText = void 0;
+exports.generateCacheKey = exports.ExpoLocaleDetector = exports.MemoryLRUCache = exports.AsyncStorageCache = exports.LiveI18n = exports.useLiveText = exports.useLiveI18n = exports.LiveI18nProvider = exports.LiveText = void 0;
 // Expo specific components and hooks
 var LiveText_1 = require("./LiveText");
 Object.defineProperty(exports, "LiveText", { enumerable: true, get: function () { return LiveText_1.LiveText; } });
 Object.defineProperty(exports, "LiveI18nProvider", { enumerable: true, get: function () { return LiveText_1.LiveI18nProvider; } });
 Object.defineProperty(exports, "useLiveI18n", { enumerable: true, get: function () { return LiveText_1.useLiveI18n; } });
+var useLiveText_1 = require("./useLiveText");
+Object.defineProperty(exports, "useLiveText", { enumerable: true, get: function () { return useLiveText_1.useLiveText; } });
 // Core classes
 var LiveI18n_1 = require("./LiveI18n");
 Object.defineProperty(exports, "LiveI18n", { enumerable: true, get: function () { return LiveI18n_1.LiveI18n; } });

@@ -1,4 +1,5 @@
 export { LiveText, LiveI18nProvider, useLiveI18n } from './LiveText';
+export { useLiveText } from './useLiveText';
 export type { ExpoLiveI18nConfig, LiveI18nProviderProps } from './LiveText';
 export { LiveI18n } from './LiveI18n';
 export { AsyncStorageCache } from './AsyncStorageCache';

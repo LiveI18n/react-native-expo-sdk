@@ -4,6 +4,7 @@ export {
   LiveI18nProvider,
   useLiveI18n
 } from './LiveText';
+export { useLiveText } from './useLiveText';
 
 // Expo specific types
 export type { ExpoLiveI18nConfig, LiveI18nProviderProps } from './LiveText';
