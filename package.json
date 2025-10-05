@@ -24,9 +24,7 @@
   "license": "MIT",
   "peerDependencies": {
     "react": "*",
-    "react-native": "*"
-  },
-  "optionalDependencies": {
+    "react-native": "*",
     "@react-native-async-storage/async-storage": ">=1.17.0",
     "expo": ">=47.0.0",
     "expo-localization": ">=14.0.0"
