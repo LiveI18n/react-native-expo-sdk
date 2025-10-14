@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateCacheKey = exports.ExpoLocaleDetector = exports.MemoryLRUCache = exports.AsyncStorageCache = exports.LiveI18n = exports.useLiveText = exports.useLiveI18n = exports.LiveI18nProvider = exports.LiveText = void 0;
+exports.generateLoadingText = exports.generateCacheKey = exports.ExpoLocaleDetector = exports.MemoryLRUCache = exports.AsyncStorageCache = exports.LiveI18n = exports.useLiveText = exports.useLiveI18n = exports.LiveI18nProvider = exports.LiveText = void 0;
 // Expo specific components and hooks
 var LiveText_1 = require("./LiveText");
 Object.defineProperty(exports, "LiveText", { enumerable: true, get: function () { return LiveText_1.LiveText; } });
@@ -22,3 +22,6 @@ Object.defineProperty(exports, "ExpoLocaleDetector", { enumerable: true, get: fu
 // Cache key generation
 var cacheKey_1 = require("./cacheKey");
 Object.defineProperty(exports, "generateCacheKey", { enumerable: true, get: function () { return cacheKey_1.generateCacheKey; } });
+// Loading indicator utilities
+var loadingIndicator_1 = require("./loadingIndicator");
+Object.defineProperty(exports, "generateLoadingText", { enumerable: true, get: function () { return loadingIndicator_1.generateLoadingText; } });

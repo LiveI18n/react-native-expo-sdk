@@ -1,5 +1,6 @@
 import { MemoryLRUCache } from './MemoryLRUCache';
 import { AsyncStorageCache } from './AsyncStorageCache';
+import { type LoadingPattern } from './loadingIndicator';
 import type { LiveI18nConfig, LiveTextOptions, LocaleDetector, SupportedLanguagesResponse } from './types';
 /**
  * Core LiveI18n translation class for React Native
@@ -13,6 +14,7 @@ export declare class LiveI18n {
     private defaultLanguage?;
     private debug;
     private batchRequests;
+    private loadingPattern;
     private localeDetector?;
     private translationQueue;
     private queueTimer;
@@ -76,6 +78,10 @@ export declare class LiveI18n {
      * Get the current default language
      */
     getDefaultLanguage(): string | undefined;
+    /**
+     * Get the current loading pattern configuration
+     */
+    getLoadingPattern(): LoadingPattern;
     /**
      * Get supported languages from the API
      * @param all - If true, returns all supported languages. If false/undefined, returns top 20

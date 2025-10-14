@@ -7,3 +7,5 @@ export { MemoryLRUCache } from './MemoryLRUCache';
 export { ExpoLocaleDetector } from './ExpoLocaleDetector';
 export type { LiveTextOptions, LiveI18nConfig, LocaleDetector, TranslationResponse, SupportedLanguage, SupportedLanguagesResponse } from './types';
 export { generateCacheKey } from './cacheKey';
+export { generateLoadingText } from './loadingIndicator';
+export type { LoadingPattern } from './loadingIndicator';

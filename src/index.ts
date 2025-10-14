@@ -25,3 +25,7 @@ export type { LiveTextOptions, LiveI18nConfig, LocaleDetector, TranslationRespon
 // Cache key generation
 export { generateCacheKey } from './cacheKey';
 
+// Loading indicator utilities
+export { generateLoadingText } from './loadingIndicator';
+export type { LoadingPattern } from './loadingIndicator';
+

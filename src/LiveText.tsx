@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useCallback, createContext, useContext } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, createContext, useContext } from 'react';
 import { LiveI18n } from './LiveI18n';
 import type { LiveTextOptions, LiveI18nConfig } from './types';
 import { ExpoLocaleDetector } from './ExpoLocaleDetector';
 import { AsyncStorageCache } from './AsyncStorageCache';
 import { DEFAULT_CACHE_SIZE } from './MemoryLRUCache';
+import { generateLoadingText } from './loadingIndicator';
 
 // React Context for LiveI18n
 interface LiveI18nContextValue {
@@ -12,7 +13,7 @@ interface LiveI18nContextValue {
   updateDefaultLanguage: (language?: string) => void;
 }
 
-const LiveI18nContext = createContext<LiveI18nContextValue>({
+export const LiveI18nContext = createContext<LiveI18nContextValue>({
   instance: null,
   defaultLanguage: undefined,
   updateDefaultLanguage: () => {}
@@ -220,7 +221,12 @@ export const LiveText: React.FC<LiveTextProps> = ({
     instance
   ]);
 
-  return <>{translated}</>;
+  // Show loading indicator on initial load (attempts = 0) while loading
+  const shouldShowLoading = isLoading && attempts === 0;
+  const loadingPattern = instance.getLoadingPattern();
+  const displayText = shouldShowLoading ? generateLoadingText(textContent, loadingPattern) : translated;
+  
+  return <>{displayText}</>;
 };
 
 /**
@@ -236,31 +242,47 @@ export function useLiveI18n() {
 
   const instance = context.instance; // TypeScript now knows this is not null
 
-  const translate = async (text: string, options?: LiveTextOptions): Promise<string> => {
+  // Memoize the translate function to prevent recreation on every render
+  const translate = useCallback(async (text: string, options?: LiveTextOptions): Promise<string> => {
     return instance.translate(text, options);
-  };
+  }, [instance]);
 
-  return {
+  // Memoize instance-based functions
+  const clearCache = useCallback(() => instance.clearCache(), [instance]);
+  const getCacheStats = useCallback(() => instance.getCacheStats() || { size: 0, maxSize: 0 }, [instance]);
+  const getDefaultLanguage = useCallback(() => instance.getDefaultLanguage(), [instance]);
+  const getSupportedLanguages = useCallback((all?: boolean) => instance.getSupportedLanguages(all), [instance]);
+
+  // Memoize Expo-specific utilities
+  const expoDetector = useMemo(() => new ExpoLocaleDetector(), []);
+  const getPreferredLocales = useCallback(() => expoDetector.getPreferredLocales(), [expoDetector]);
+  const getDetailedLocale = useCallback(() => expoDetector.getDetailedLocale(), [expoDetector]);
+  const isRTL = useCallback(() => expoDetector.isRTL(), [expoDetector]);
+
+  // Memoize the entire return object
+  return useMemo(() => ({
     translate,
     defaultLanguage: context.defaultLanguage,
-    clearCache: () => instance.clearCache(),
-    getCacheStats: () => instance.getCacheStats() || { size: 0, maxSize: 0 },
+    clearCache,
+    getCacheStats,
     updateDefaultLanguage: context.updateDefaultLanguage,
-    getDefaultLanguage: () => instance.getDefaultLanguage(),
-    getSupportedLanguages: (all?: boolean) => instance.getSupportedLanguages(all),
+    getDefaultLanguage,
+    getSupportedLanguages,
     // Expo specific utilities
-    getPreferredLocales: () => {
-      const detector = new ExpoLocaleDetector();
-      return detector.getPreferredLocales();
-    },
-    getDetailedLocale: () => {
-      const detector = new ExpoLocaleDetector();
-      return detector.getDetailedLocale();
-    },
-    isRTL: () => {
-      const detector = new ExpoLocaleDetector();
-      return detector.isRTL();
-    }
-  };
+    getPreferredLocales,
+    getDetailedLocale,
+    isRTL
+  }), [
+    translate,
+    context.defaultLanguage,
+    clearCache,
+    getCacheStats,
+    context.updateDefaultLanguage,
+    getDefaultLanguage,
+    getSupportedLanguages,
+    getPreferredLocales,
+    getDetailedLocale,
+    isRTL
+  ]);
 }
 

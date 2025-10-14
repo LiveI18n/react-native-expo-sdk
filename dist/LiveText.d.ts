@@ -1,5 +1,12 @@
 import React from 'react';
+import { LiveI18n } from './LiveI18n';
 import type { LiveTextOptions, LiveI18nConfig } from './types';
+interface LiveI18nContextValue {
+    instance: LiveI18n | null;
+    defaultLanguage: string | undefined;
+    updateDefaultLanguage: (language?: string) => void;
+}
+export declare const LiveI18nContext: React.Context<LiveI18nContextValue>;
 /**
  * Enhanced configuration for Expo with cache options
  */
@@ -62,3 +69,4 @@ export declare function useLiveI18n(): {
     getDetailedLocale: () => any;
     isRTL: () => boolean;
 };
+export {};

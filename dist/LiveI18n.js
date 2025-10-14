@@ -3,13 +3,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LiveI18n = void 0;
 const MemoryLRUCache_1 = require("./MemoryLRUCache");
 const cacheKey_1 = require("./cacheKey");
+const loadingIndicator_1 = require("./loadingIndicator");
 /**
  * Core LiveI18n translation class for React Native
  * Includes platform-agnostic translation logic with React Native optimizations
  */
 class LiveI18n {
     constructor(config) {
-        var _a;
+        var _a, _b;
         // Batching-related properties
         this.translationQueue = [];
         this.queueTimer = null;
@@ -21,6 +22,7 @@ class LiveI18n {
         this.defaultLanguage = config.defaultLanguage;
         this.debug = config.debug || false;
         this.batchRequests = (_a = config.batch_requests) !== null && _a !== void 0 ? _a : true;
+        this.loadingPattern = ((_b = config.loading) === null || _b === void 0 ? void 0 : _b.pattern) || loadingIndicator_1.DEFAULT_LOADING_CONFIG.pattern;
         this.localeDetector = config.localeDetector;
         // Use provided cache or default to memory LRU cache
         this.cache = config.cache || new MemoryLRUCache_1.MemoryLRUCache(MemoryLRUCache_1.DEFAULT_CACHE_SIZE, 1);
@@ -367,6 +369,12 @@ class LiveI18n {
      */
     getDefaultLanguage() {
         return this.defaultLanguage;
+    }
+    /**
+     * Get the current loading pattern configuration
+     */
+    getLoadingPattern() {
+        return this.loadingPattern;
     }
     /**
      * Get supported languages from the API

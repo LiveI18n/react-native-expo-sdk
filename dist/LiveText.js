@@ -33,14 +33,15 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LiveText = exports.LiveI18nProvider = void 0;
+exports.LiveText = exports.LiveI18nProvider = exports.LiveI18nContext = void 0;
 exports.useLiveI18n = useLiveI18n;
 const react_1 = __importStar(require("react"));
 const LiveI18n_1 = require("./LiveI18n");
 const ExpoLocaleDetector_1 = require("./ExpoLocaleDetector");
 const AsyncStorageCache_1 = require("./AsyncStorageCache");
 const MemoryLRUCache_1 = require("./MemoryLRUCache");
-const LiveI18nContext = (0, react_1.createContext)({
+const loadingIndicator_1 = require("./loadingIndicator");
+exports.LiveI18nContext = (0, react_1.createContext)({
     instance: null,
     defaultLanguage: undefined,
     updateDefaultLanguage: () => { }
@@ -82,7 +83,7 @@ const LiveI18nProvider = ({ config, children }) => {
         defaultLanguage,
         updateDefaultLanguage
     }), [instance, defaultLanguage, updateDefaultLanguage]);
-    return (react_1.default.createElement(LiveI18nContext.Provider, { value: contextValue() }, children));
+    return (react_1.default.createElement(exports.LiveI18nContext.Provider, { value: contextValue() }, children));
 };
 exports.LiveI18nProvider = LiveI18nProvider;
 /**
@@ -115,7 +116,7 @@ const LiveText = ({ children, tone, context, language, fallback, onTranslationCo
     const [translated, setTranslated] = (0, react_1.useState)(textContent);
     const [isLoading, setIsLoading] = (0, react_1.useState)(true);
     const [attempts, setAttempts] = (0, react_1.useState)(0);
-    const contextValue = (0, react_1.useContext)(LiveI18nContext);
+    const contextValue = (0, react_1.useContext)(exports.LiveI18nContext);
     if (!contextValue.instance) {
         throw new Error('LiveText must be used within LiveI18nProvider');
     }
@@ -164,7 +165,11 @@ const LiveText = ({ children, tone, context, language, fallback, onTranslationCo
         onError,
         instance
     ]);
-    return react_1.default.createElement(react_1.default.Fragment, null, translated);
+    // Show loading indicator on initial load (attempts = 0) while loading
+    const shouldShowLoading = isLoading && attempts === 0;
+    const loadingPattern = instance.getLoadingPattern();
+    const displayText = shouldShowLoading ? (0, loadingIndicator_1.generateLoadingText)(textContent, loadingPattern) : translated;
+    return react_1.default.createElement(react_1.default.Fragment, null, displayText);
 };
 exports.LiveText = LiveText;
 /**
@@ -172,34 +177,48 @@ exports.LiveText = LiveText;
  * Must be used within LiveI18nProvider
  */
 function useLiveI18n() {
-    const context = (0, react_1.useContext)(LiveI18nContext);
+    const context = (0, react_1.useContext)(exports.LiveI18nContext);
     if (!context.instance) {
         throw new Error('useLiveI18n must be used within LiveI18nProvider');
     }
     const instance = context.instance; // TypeScript now knows this is not null
-    const translate = async (text, options) => {
+    // Memoize the translate function to prevent recreation on every render
+    const translate = (0, react_1.useCallback)(async (text, options) => {
         return instance.translate(text, options);
-    };
-    return {
+    }, [instance]);
+    // Memoize instance-based functions
+    const clearCache = (0, react_1.useCallback)(() => instance.clearCache(), [instance]);
+    const getCacheStats = (0, react_1.useCallback)(() => instance.getCacheStats() || { size: 0, maxSize: 0 }, [instance]);
+    const getDefaultLanguage = (0, react_1.useCallback)(() => instance.getDefaultLanguage(), [instance]);
+    const getSupportedLanguages = (0, react_1.useCallback)((all) => instance.getSupportedLanguages(all), [instance]);
+    // Memoize Expo-specific utilities
+    const expoDetector = (0, react_1.useMemo)(() => new ExpoLocaleDetector_1.ExpoLocaleDetector(), []);
+    const getPreferredLocales = (0, react_1.useCallback)(() => expoDetector.getPreferredLocales(), [expoDetector]);
+    const getDetailedLocale = (0, react_1.useCallback)(() => expoDetector.getDetailedLocale(), [expoDetector]);
+    const isRTL = (0, react_1.useCallback)(() => expoDetector.isRTL(), [expoDetector]);
+    // Memoize the entire return object
+    return (0, react_1.useMemo)(() => ({
         translate,
         defaultLanguage: context.defaultLanguage,
-        clearCache: () => instance.clearCache(),
-        getCacheStats: () => instance.getCacheStats() || { size: 0, maxSize: 0 },
+        clearCache,
+        getCacheStats,
         updateDefaultLanguage: context.updateDefaultLanguage,
-        getDefaultLanguage: () => instance.getDefaultLanguage(),
-        getSupportedLanguages: (all) => instance.getSupportedLanguages(all),
+        getDefaultLanguage,
+        getSupportedLanguages,
         // Expo specific utilities
-        getPreferredLocales: () => {
-            const detector = new ExpoLocaleDetector_1.ExpoLocaleDetector();
-            return detector.getPreferredLocales();
-        },
-        getDetailedLocale: () => {
-            const detector = new ExpoLocaleDetector_1.ExpoLocaleDetector();
-            return detector.getDetailedLocale();
-        },
-        isRTL: () => {
-            const detector = new ExpoLocaleDetector_1.ExpoLocaleDetector();
-            return detector.isRTL();
-        }
-    };
+        getPreferredLocales,
+        getDetailedLocale,
+        isRTL
+    }), [
+        translate,
+        context.defaultLanguage,
+        clearCache,
+        getCacheStats,
+        context.updateDefaultLanguage,
+        getDefaultLanguage,
+        getSupportedLanguages,
+        getPreferredLocales,
+        getDetailedLocale,
+        isRTL
+    ]);
 }

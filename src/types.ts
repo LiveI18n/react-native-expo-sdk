@@ -11,6 +11,10 @@ export interface LiveI18nConfig {
   defaultLanguage?: string;
   debug?: boolean;
   batch_requests?: boolean;
+  loading?: {
+    /** Loading indicator pattern: 'dots', 'blocks', or 'none' (default: 'none') */
+    pattern?: 'dots' | 'blocks' | 'none';
+  };
 }
 
 export interface TranslationResponse {
