@@ -200,4 +200,11 @@ export class AsyncStorageCache {
       console.warn('LiveI18n: Error preloading cache from AsyncStorage:', error);
     }
   }
+
+  /**
+   * Get the cache TTL in milliseconds
+   */
+  getTtl(): number {
+    return this.ttl;
+  }
 }

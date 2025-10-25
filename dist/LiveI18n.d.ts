@@ -19,6 +19,8 @@ export declare class LiveI18n {
     private translationQueue;
     private queueTimer;
     private supportedLanguagesCache;
+    private cachedDetectedLocale;
+    private cacheTimeout;
     constructor(config: LiveI18nConfig & {
         localeDetector?: LocaleDetector;
         cache?: MemoryLRUCache | AsyncStorageCache;
@@ -89,7 +91,7 @@ export declare class LiveI18n {
      */
     getSupportedLanguages(all?: boolean): Promise<SupportedLanguagesResponse>;
     /**
-     * Detect locale using platform-specific detector or fallback
+     * Detect locale using platform-specific detector or fallback (cached for performance with TTL)
      */
     private detectLocale;
 }

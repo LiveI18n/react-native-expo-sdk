@@ -25,6 +25,10 @@ export class LiveI18n {
   
   // Supported languages cache
   private supportedLanguagesCache: { [key: string]: { data: SupportedLanguagesResponse; timestamp: number } } = {};
+  
+  // Cached detected locale to avoid repeated detection
+  private cachedDetectedLocale: { locale: string; timestamp: number } | null = null;
+  private cacheTimeout: number; // Cache TTL in milliseconds
 
   constructor(config: LiveI18nConfig & { 
     localeDetector?: LocaleDetector;
@@ -41,6 +45,9 @@ export class LiveI18n {
     
     // Use provided cache or default to memory LRU cache
     this.cache = config.cache || new MemoryLRUCache(DEFAULT_CACHE_SIZE, 1);
+    
+    // Set cache timeout based on the actual cache instance TTL
+    this.cacheTimeout = this.cache.getTtl();
   }
 
   /**
@@ -279,9 +286,9 @@ export class LiveI18n {
       const queueItem = currentQueue[i];
       const result = results[i];
       
-      // Check if result is different from original text (successful translation)
-      if (result && result !== queueItem.text) {
-        // Cache the successful translation locally
+      // Cache the result if we got a valid response
+      if (result) {
+        // Cache the successful translation locally (even if it's the same as original)
         this.cache.set(queueItem.cacheKey, result);
         queueItem.resolve(result);
       } else {
@@ -453,6 +460,8 @@ export class LiveI18n {
    */
   updateDefaultLanguage(language?: string): void {
     this.defaultLanguage = language;
+    // Clear cached detected locale since language preference has changed
+    this.cachedDetectedLocale = null;
   }
 
   /**
@@ -519,14 +528,29 @@ export class LiveI18n {
   }
 
   /**
-   * Detect locale using platform-specific detector or fallback
+   * Detect locale using platform-specific detector or fallback (cached for performance with TTL)
    */
   private detectLocale(): string {
-    if (this.localeDetector) {
-      return this.localeDetector.detectLocale();
+    const now = Date.now();
+    
+    // Return cached locale if still valid
+    if (this.cachedDetectedLocale && (now - this.cachedDetectedLocale.timestamp) < this.cacheTimeout) {
+      this.debugLog(`Using cached detected locale: ${this.cachedDetectedLocale.locale}`);
+      return this.cachedDetectedLocale.locale;
     }
     
-    // Fallback locale detection (basic)
-    return 'en-US';
+    // Detect and cache the locale
+    let detectedLocale = 'en-US';
+    if (this.localeDetector) {
+      detectedLocale = this.localeDetector.detectLocale();
+    }
+    
+    this.cachedDetectedLocale = {
+      locale: detectedLocale,
+      timestamp: now
+    };
+    this.debugLog(`Detected and cached locale: ${detectedLocale} (TTL: ${this.cacheTimeout}ms)`);
+    
+    return detectedLocale;
   }
 }

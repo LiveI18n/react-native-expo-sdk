@@ -45,4 +45,8 @@ export declare class AsyncStorageCache {
      * Call this during app initialization for better performance
      */
     preloadCache(maxItems?: number): Promise<void>;
+    /**
+     * Get the cache TTL in milliseconds
+     */
+    getTtl(): number;
 }

@@ -12,4 +12,8 @@ export declare class MemoryLRUCache {
     set(key: string, value: string, onEvict?: (evictedKey: string) => void): void;
     clear(): void;
     size(): number;
+    /**
+     * Get the cache TTL in milliseconds
+     */
+    getTtl(): number;
 }

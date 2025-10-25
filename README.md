@@ -17,15 +17,7 @@ Real-time AI-powered translation SDK optimized for Expo applications. Translate 
 ## Installation
 
 ```bash
-npm install @livei18n/react-native-expo-sdk
-```
-
-### Required Dependencies
-
-For full functionality, install these Expo packages:
-
-```bash
-npx expo install expo-localization @react-native-async-storage/async-storage
+npx expo install @livei18n/react-native-expo-sdk expo-localization @react-native-async-storage/async-storage
 ```
 
 - `expo-localization` - For automatic locale detection and RTL support

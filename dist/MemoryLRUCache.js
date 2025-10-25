@@ -49,5 +49,11 @@ class MemoryLRUCache {
     size() {
         return this.cache.size;
     }
+    /**
+     * Get the cache TTL in milliseconds
+     */
+    getTtl() {
+        return this.ttl;
+    }
 }
 exports.MemoryLRUCache = MemoryLRUCache;
